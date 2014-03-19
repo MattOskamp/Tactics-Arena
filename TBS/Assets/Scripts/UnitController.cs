@@ -22,7 +22,7 @@ public class UnitController: MonoBehaviour {
 	private bool hasMoved;
 	public bool hasAttacked;
 
-	public GameManager.Player controller;
+	public PlayerController controller;
 
 	public enum UnitOrientation
 	{
@@ -73,6 +73,7 @@ public class UnitController: MonoBehaviour {
 				this.transform.position = targetTile.transform.position;
 				state = UnitState.Idle;
 				this.hasMoved = true;
+				this.controller.hasMoved = true;
 				this.currentTile.UnitOnTile = null;
 				this.targetTile.SetUnit(this);
 				this.currentTile = this.targetTile;
@@ -110,8 +111,11 @@ public class UnitController: MonoBehaviour {
 		switch(state)
 		{
 		case UnitState.Idle:
-			if (controller == GameManager.Instance.currentTurn && !hasMoved)
+			if (controller == GameManager.Instance.currentTurn && !controller.hasMoved)
+			{
+				GameManager.Instance.SelectedUnit = this;
 				GameManager.Instance.ShowMovementRange(this.currentTile, this.moveRange);
+			}
 			break;
 		}
 	}
@@ -121,8 +125,11 @@ public class UnitController: MonoBehaviour {
 		switch (state)
 		{
 		case UnitState.Idle:
-			if (controller == GameManager.Instance.currentTurn && !hasAttacked)
-				GameManager.Instance.ShowAttackRange(this.currentTile, this.attackRange);
+			if (controller == GameManager.Instance.currentTurn && !controller.hasAttacked)
+				if (controller.hasMoved && controller.selectedUnit == this)
+					GameManager.Instance.ShowAttackRange(this.currentTile, this.attackRange);
+				else if (!controller.hasMoved)
+					GameManager.Instance.ShowAttackRange(this.currentTile, this.attackRange);
 			break;
 		}
 	}

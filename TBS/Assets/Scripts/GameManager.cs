@@ -9,22 +9,22 @@ public class GameManager : MonoBehaviour {
 	public GameObject tilePrefab;
 	public GameObject unitPrefab;
 
-	public List<UnitController> player1Units;
-	public List<UnitController> player2Units;
+	public int numberOfPlayers = 2;
+	private List<PlayerController> players;
+
+	public Color player1Colour;
+	public Color player2Colour;
 
 	public enum GameState {
 		Moving,
 		Attacking,
+		Directing,
 		Waiting
 	}
 
-	public enum Player
-	{
-		One,
-		Two
-	}
+	public PlayerController currentTurn;
+	private int turnIndex;
 
-	public Player currentTurn;
 	public GameState state;
 
 	private TileController[,] board;
@@ -32,8 +32,8 @@ public class GameManager : MonoBehaviour {
 
 	public UnitController SelectedUnit
 	{
-		get { return selectedUnit; }
-		set { selectedUnit = value; }
+		get { return this.currentTurn.selectedUnit; }
+		set { this.currentTurn.selectedUnit = value; }
 	}
 
 	private static GameManager instance;
@@ -53,23 +53,33 @@ public class GameManager : MonoBehaviour {
 	void Start () {
 		BuildBoard();
 		state = GameState.Moving;
-		currentTurn = Player.One;
+		turnIndex = 0;
+		players = new List<PlayerController>();
+		for (int i = 0; i < numberOfPlayers; i++)
+		{
+			PlayerController p = new PlayerController("Player " + (i + 1));
+			players.Add(p);
+		}
 
-		player1Units = new List<UnitController>();
-		player2Units = new List<UnitController>();
+		currentTurn = players[turnIndex];
 
 		// set up the units on the board
-		GameObject go = GameObject.Instantiate(unitPrefab, board[4,4].transform.position, Quaternion.identity) as GameObject;
-		UnitController uc = go.GetComponent<UnitController>();
-		uc.SetCurrentTile(board[4,4]);
-		uc.controller = Player.One;
-		player1Units.Add(uc);
+		for (int i = 0; i < boardWidth; i++)
+		{
+			GameObject go = GameObject.Instantiate(unitPrefab, board[1,i].transform.position, Quaternion.identity) as GameObject;
+			UnitController uc = go.GetComponent<UnitController>();
+			uc.SetCurrentTile(board[1,i]);
+			uc.controller = players[0];
+			uc.renderer.material.color = player1Colour;
+			players[0].unitList.Add(uc);
 
-		GameObject go1 = GameObject.Instantiate(unitPrefab, board[8,4].transform.position, Quaternion.identity) as GameObject;
-		UnitController uc1 = go1.GetComponent<UnitController>();
-		uc1.SetCurrentTile(board[8,4]);
-		uc1.controller = Player.Two;
-		player2Units.Add(uc1);
+			GameObject go1 = GameObject.Instantiate(unitPrefab, board[boardWidth - 2, i].transform.position, Quaternion.identity) as GameObject;
+			UnitController uc1 = go1.GetComponent<UnitController>();
+			uc1.SetCurrentTile(board[boardWidth-2, i]);
+			uc1.controller = players[1];
+			uc1.renderer.material.color = player2Colour;
+			players[1].unitList.Add(uc1);
+		}
 	}
 	
 	// Update is called once per frame
@@ -84,9 +94,6 @@ public class GameManager : MonoBehaviour {
 			{
 				TileController tile = hit.collider.GetComponent<TileController>();
 				tile.OnTileMouseDown();
-				if (tile.HasUnit())
-					if (tile.UnitOnTile.controller == currentTurn)
-						this.selectedUnit = tile.UnitOnTile;
 			}
 		}
 	}
@@ -219,30 +226,18 @@ public class GameManager : MonoBehaviour {
 
 	public void EndTurn()
 	{
-		if (currentTurn == Player.One)
+		if (turnIndex == 0) // player 1
 		{
-			currentTurn = Player.Two;
-			foreach (UnitController uc in player2Units)
-			{
-				uc.BeginTurn();
-			}
-			foreach (UnitController uc in player1Units)
-			{
-				uc.EndTurn();
-			}
+			turnIndex++;
+			players[0].EndTurn();
 		}
-		else
+		else // only 2 players for now
 		{
-			currentTurn = Player.One;
-			foreach (UnitController uc in player1Units)
-			{
-				uc.BeginTurn();
-			}
-			foreach (UnitController uc in player2Units)
-			{
-				uc.EndTurn();
-			}
+			turnIndex = 0;
+			players[1].EndTurn();
 		}
+		this.currentTurn = players[turnIndex];
+		this.currentTurn.BeginTurn();
 		this.state = GameState.Moving;
 		this.ClearTiles();
 	}
@@ -252,6 +247,7 @@ public class GameManager : MonoBehaviour {
 		// see if the attacked is attacking from the front, side, or rear
 		// see if the attack was blocked
 		attacker.hasAttacked = true;
+		currentTurn.hasAttacked = true;
 
 		if (attacker.facing == defender.facing)
 		{

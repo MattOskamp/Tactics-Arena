@@ -34,16 +34,9 @@ public class GUIManager : MonoBehaviour {
 			moveStyle.normal.textColor = Color.white;
 		}
 
-		if (GameManager.Instance.currentTurn == GameManager.Player.One)
-		{
-			playerText = "Player 1";
-		}
-		else
-		{
-			playerText = "Player 2";
-		}
+		playerText = GameManager.Instance.currentTurn.name;
 
-		GUI.Label(new Rect(Screen.width - 200, 20, 80, 20), playerText);
+		GUI.Label(new Rect(20, 50, 80, 20), playerText);
 		if (GUI.Button(new Rect(Screen.width - 100, 20, 80, 20), "End Turn"))
 		{
 			// tell the game manager to end the turn
